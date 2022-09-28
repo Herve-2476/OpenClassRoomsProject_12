@@ -4,3 +4,4 @@ flake8<5.0.0
 flake8-html
 drf-nested-routers
 djangorestframework_simplejwt
+psycopg2
