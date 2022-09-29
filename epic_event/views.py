@@ -2,44 +2,70 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
-from .models import User, Client, Contract
+from .models import User, Client, Contract, Event
 from . import serializer
-from . import permissions
+from .permissions import IsSalesRepresentative, IsClientOwner
+from .permissions import IsContractOwner
+from .permissions import IsEventOwner
 
 
 class ClientViewset(ModelViewSet):
 
     http_method_names = ["post", "get", "put"]
     serializer_class = serializer.ClientSerializer
-    permission_classes = [
-        IsAuthenticated,
-        permissions.IsCommercial,
-        permissions.IsClientOwner,
+    queryset = Client.objects.all()
+    permission_classes = [IsAuthenticated]
+    create_permission_classes = [IsAuthenticated(), IsSalesRepresentative()]
+    update_permission_classes = [
+        IsAuthenticated(),
+        IsSalesRepresentative(),
+        IsClientOwner(),
     ]
 
-    def get_queryset(self):
+    def get_permissions(self):
+        if self.action == "create":
+            return self.create_permission_classes
         if self.action == "update":
-            client_id = self.kwargs["pk"]
-            return Client.objects.fileter(id=client_id)
-        return Client.objects.all()
+            return self.update_permission_classes
+        return super().get_permissions()
 
 
 class ContractViewset(ModelViewSet):
 
     http_method_names = ["post", "get", "put"]
     serializer_class = serializer.ContractSerializer
-    permission_classes = [
-        IsAuthenticated,
-        permissions.IsCommercial,
-        permissions.IsContractOwner,
+    queryset = Contract.objects.all()
+    permission_classes = [IsAuthenticated]
+    create_permission_classes = [
+        IsAuthenticated(),
+        IsSalesRepresentative(),
+        IsClientOwner(),
+    ]
+    update_permission_classes = [
+        IsAuthenticated(),
+        IsSalesRepresentative(),
+        IsContractOwner(),
     ]
 
-    def get_queryset(self):
-
+    def get_permissions(self):
+        if self.action == "create":
+            return self.create_permission_classes
         if self.action == "update":
-            client_id = self.request.data["client"]
-            if not (Client.objects.filter(id=client_id)):
-                raise ValidationError("This client does not exist")
-            contract_id = self.kwargs["pk"]
-            return Contract.objects.filter(id=contract_id)
-        return Contract.objects.all()
+            return self.update_permission_classes
+        return super().get_permissions()
+
+
+class EventViewset(ModelViewSet):
+    http_method_names = ["post", "get", "put"]
+    serializer_class = serializer.EventSerializer
+    queryset = Event.objects.all()
+    permission_classes = [IsAuthenticated]
+    create_permission_classes = [IsAuthenticated(), IsSalesRepresentative()]
+    update_permission_classes = [IsAuthenticated(), IsEventOwner()]
+
+    def get_permissions(self):
+        if self.action == "create":
+            return self.create_permission_classes
+        if self.action == "update":
+            return self.update_permission_classes
+        return super().get_permissions()

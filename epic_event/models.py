@@ -50,7 +50,7 @@ class Event(models.Model):
         (4, "ready"),
         (5, "finished"),
     ]
-    contract = models.ForeignKey(
+    contract = models.OneToOneField(
         "Contract", on_delete=models.PROTECT, related_name="event"
     )
     support_contact = models.ForeignKey(
@@ -61,7 +61,7 @@ class Event(models.Model):
     )
     date_created = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)
-    event_status = models.IntegerField(choices=choices)
-    attendees = models.IntegerField(choices=choices)
+    event_status = models.IntegerField(choices=choices, default=1)
+    attendees = models.IntegerField()
     event_date = models.DateTimeField()
-    notes = models.TextField(max_length=1000)
+    notes = models.TextField(max_length=1000, null=True)

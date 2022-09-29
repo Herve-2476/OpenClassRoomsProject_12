@@ -1,9 +1,10 @@
 from rest_framework.permissions import BasePermission
-from .models import Client
+from django.shortcuts import get_object_or_404
+from .models import Client, Contract
 
 
-class IsCommercial(BasePermission):
-    message = "You must be a commercial to access this feature"
+class IsSalesRepresentative(BasePermission):
+    message = "You must be a sales representative to access this feature"
 
     def has_permission(self, request, view):
         return "Sales" == str(request.user.groups.all().first())
@@ -12,15 +13,32 @@ class IsCommercial(BasePermission):
 class IsClientOwner(BasePermission):
     message = "it's not your client"
 
-    def has_object_permission(self, request, view, obj):
-        return obj.sales_contact == request.user
+    def has_permission(self, request, view):
+        client_id = view.kwargs["client_pk"]
+        client = get_object_or_404(Client, id=client_id)
+        return client.sales_contact == request.user
 
 
 class IsContractOwner(BasePermission):
     message = "it's not your client"
 
-    def has_object_permission(self, request, view, obj):
-        return obj.sales_contact == request.user
+    def has_permission(self, request, view):
+        print()
+        contract_id = view.kwargs["pk"]
+        contract = get_object_or_404(Contract, id=contract_id)
+        return contract.sales_contact == request.user
+
+
+class IsClientContractOwner(BasePermission):
+    # The code is the same for Client and Contract because of
+    # the two attributes sales_contact have the same name in the
+    # two models
+    message = "it's not your client"
+
+    def has_permission(self, request):
+        client_id = self.context["view"].kwargs["client_pk"]
+        client = get_object_or_404(Client, id=client_id)
+        return client.sales_contact == request.user
 
 
 class IsSupport(BasePermission):
@@ -28,3 +46,12 @@ class IsSupport(BasePermission):
 
     def has_permission(self, request, view):
         return "Support" == str(request.user.groups.all().first())
+
+
+class IsEventOwner(BasePermission):
+    message = "You must be the sales representative or the support of this event"
+
+    def has_object_permission(self, request, view, obj):
+        sales_representative = Contract.objects.get(id=obj.contract_id).sales_contact
+        support = obj.support_contact
+        return request.user in [support, sales_representative]
