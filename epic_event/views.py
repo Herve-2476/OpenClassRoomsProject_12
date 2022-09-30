@@ -13,7 +13,7 @@ class ClientViewset(ModelViewSet):
 
     http_method_names = ["post", "get", "put"]
     serializer_class = serializer.ClientSerializer
-    queryset = Client.objects.all()
+
     permission_classes = [IsAuthenticated]
     create_permission_classes = [IsAuthenticated(), IsSalesRepresentative()]
     update_permission_classes = [
@@ -21,6 +21,15 @@ class ClientViewset(ModelViewSet):
         IsSalesRepresentative(),
         IsClientOwner(),
     ]
+
+    def get_queryset(self):
+        if len(self.request.query_params) > 0:
+            kwargs = {}
+            for field, value in self.request.query_params.items():
+                if field in ["last_name", "email"]:
+                    kwargs[field] = value
+            return Client.objects.filter(**kwargs)
+        return Client.objects.all()
 
     def get_permissions(self):
         if self.action == "create":
@@ -34,7 +43,6 @@ class ContractViewset(ModelViewSet):
 
     http_method_names = ["post", "get", "put"]
     serializer_class = serializer.ContractSerializer
-    queryset = Contract.objects.all()
     permission_classes = [IsAuthenticated]
     create_permission_classes = [
         IsAuthenticated(),
@@ -47,6 +55,18 @@ class ContractViewset(ModelViewSet):
         IsContractOwner(),
     ]
 
+    def get_queryset(self):
+        if len(self.request.query_params) > 0:
+            kwargs = {}
+            for field, value in self.request.query_params.items():
+                if field in ["last_name", "email"]:
+                    kwargs["client__" + field] = value
+                if field in ["amount", "date_created"]:
+                    kwargs[field + "__gt"] = value
+            return Contract.objects.filter(**kwargs)
+
+        return Contract.objects.all()
+
     def get_permissions(self):
         if self.action == "create":
             return self.create_permission_classes
@@ -58,7 +78,6 @@ class ContractViewset(ModelViewSet):
 class EventViewset(ModelViewSet):
     http_method_names = ["post", "get", "put"]
     serializer_class = serializer.EventSerializer
-    queryset = Event.objects.all()
     permission_classes = [IsAuthenticated]
     create_permission_classes = [
         IsAuthenticated(),
@@ -66,6 +85,18 @@ class EventViewset(ModelViewSet):
         IsContractOwner(),
     ]
     update_permission_classes = [IsAuthenticated(), IsEventOwner()]
+
+    def get_queryset(self):
+        if len(self.request.query_params) > 0:
+            kwargs = {}
+            for field, value in self.request.query_params.items():
+                if field in ["last_name", "email"]:
+                    kwargs["contract__client__" + field] = value
+                if field in ["date_created"]:
+                    kwargs[field + "__gt"] = value
+            return Event.objects.filter(**kwargs)
+
+        return Event.objects.all()
 
     def get_permissions(self):
         if self.action == "create":
