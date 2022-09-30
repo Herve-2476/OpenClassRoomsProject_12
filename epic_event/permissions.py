@@ -23,8 +23,10 @@ class IsContractOwner(BasePermission):
     message = "it's not your client"
 
     def has_permission(self, request, view):
-        print()
-        contract_id = view.kwargs["pk"]
+        if "contract_pk" in view.kwargs:
+            contract_id = view.kwargs["contract_pk"]
+        else:
+            contract_id = view.kwargs["pk"]
         contract = get_object_or_404(Contract, id=contract_id)
         return contract.sales_contact == request.user
 

@@ -39,8 +39,8 @@ class ContractSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, data):
-        id_client = self.context["view"].kwargs["client_pk"]
-        data["client"] = get_object_or_404(Client, id=id_client)
+        client_id = self.context["view"].kwargs["client_pk"]
+        data["client"] = get_object_or_404(Client, id=client_id)
         data["sales_contact"] = self.context["request"].user
         return super().create(data)
 
@@ -62,8 +62,8 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         fields = [
             "id",
-            "contract",
-            "support_contact",
+            "contract_id",
+            "support_contact_id",
             "event_status",
             "attendees",
             "event_date",
@@ -72,16 +72,29 @@ class EventSerializer(serializers.ModelSerializer):
             "date_updated",
         ]
 
+    def url_consistency(self):
+        # the client exists?
+        client_id = self.context["view"].kwargs["client_pk"]
+        client = get_object_or_404(Client, id=client_id)
+        # the contract exist?
+        contract_id = self.context["view"].kwargs["contract_pk"]
+        contract = get_object_or_404(Contract, id=contract_id)
+
+        return client, contract
+
     def create(self, data):
-        # The field support_contact cannot be create here
-        if "support_contact" in data:
-            data.pop("support_contact")
+        client, contract = self.url_consistency()
+        if contract.client != client:
+            raise serializers.ValidationError("It is not a contract of the client")
+        data["contract"] = contract
         return super().create(data)
 
     def update(self, instance, data):
-        # fields contract and support_contact cannot be changed
-        data["contract"] = instance.contract
-        data["support_contact"] = instance.support_contact
+        _, contract = self.url_consistency()
+        event_id = self.context["view"].kwargs["pk"]
+        event = get_object_or_404(Event, id=event_id)
+        if event.contract != contract:
+            raise serializers.ValidationError("Contract and event are non consistent")
         return super().update(instance, data)
 
     def validate_contract(self, value):

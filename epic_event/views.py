@@ -60,7 +60,11 @@ class EventViewset(ModelViewSet):
     serializer_class = serializer.EventSerializer
     queryset = Event.objects.all()
     permission_classes = [IsAuthenticated]
-    create_permission_classes = [IsAuthenticated(), IsSalesRepresentative()]
+    create_permission_classes = [
+        IsAuthenticated(),
+        IsSalesRepresentative(),
+        IsContractOwner(),
+    ]
     update_permission_classes = [IsAuthenticated(), IsEventOwner()]
 
     def get_permissions(self):
