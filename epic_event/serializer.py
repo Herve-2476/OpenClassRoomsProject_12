@@ -39,8 +39,9 @@ class ContractSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, data):
-        client_id = self.context["view"].kwargs["client_pk"]
-        data["client"] = get_object_or_404(Client, id=client_id)
+        client_id = self.context["request"].data["client_id"]
+        client = get_object_or_404(Client, id=client_id)
+        data["client"] = client
         data["sales_contact"] = self.context["request"].user
         return super().create(data)
 

@@ -24,11 +24,28 @@ class ClientViewset(ModelViewSet):
 
     def get_queryset(self):
         if len(self.request.query_params) > 0:
-            kwargs = {}
-            for field, value in self.request.query_params.items():
-                if field in ["last_name", "email"]:
-                    kwargs[field] = value
-            return Client.objects.filter(**kwargs)
+            if (
+                len(self.request.query_params) == 1
+                and "client" in self.request.query_params
+            ):  # list of the clients or of the prospects
+                value = self.request.query_params["client"]
+                signed_contract = Contract.objects.filter(status=True)
+                signed_client = {contract.client for contract in signed_contract}
+                if value == "True":
+                    return Client.objects.filter(
+                        id__in={client.id for client in signed_client}
+                    )
+                else:
+                    return Client.objects.exclude(
+                        id__in={client.id for client in signed_client}
+                    )
+
+            else:
+                kwargs = {}
+                for field, value in self.request.query_params.items():
+                    if field in ["last_name", "email"]:
+                        kwargs[field] = value
+                return Client.objects.filter(**kwargs)
         return Client.objects.all()
 
     def get_permissions(self):
@@ -56,12 +73,13 @@ class ContractViewset(ModelViewSet):
     ]
 
     def get_queryset(self):
+        print("query")
         if len(self.request.query_params) > 0:
             kwargs = {}
             for field, value in self.request.query_params.items():
                 if field in ["last_name", "email"]:
                     kwargs["client__" + field] = value
-                if field in ["amount", "date_created"]:
+                elif field in ["amount", "date_created"]:
                     kwargs[field + "__gt"] = value
             return Contract.objects.filter(**kwargs)
 
@@ -69,6 +87,10 @@ class ContractViewset(ModelViewSet):
 
     def get_permissions(self):
         if self.action == "create":
+            print("permission")
+            print(self.request)
+            print(self.kwargs)
+            print(dir(self))
             return self.create_permission_classes
         if self.action == "update":
             return self.update_permission_classes
@@ -92,7 +114,7 @@ class EventViewset(ModelViewSet):
             for field, value in self.request.query_params.items():
                 if field in ["last_name", "email"]:
                     kwargs["contract__client__" + field] = value
-                if field in ["date_created"]:
+                elif field in ["date_created"]:
                     kwargs[field + "__gt"] = value
             return Event.objects.filter(**kwargs)
 
