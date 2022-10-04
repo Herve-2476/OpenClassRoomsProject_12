@@ -13,6 +13,7 @@ class ClientSerializer(serializers.ModelSerializer):
             "last_name",
             "email",
             "phone",
+            "mobile",
             "company_name",
             "sales_contact",
             "date_created",
@@ -30,8 +31,8 @@ class ContractSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "client_id",
-            "sales_contact",
-            "status",
+            "sales_contact_id",
+            "signed",
             "amount",
             "payment_due",
             "date_created",
@@ -46,23 +47,17 @@ class ContractSerializer(serializers.ModelSerializer):
         return super().create(data)
 
     def update(self, instance, data):
-        print("ouf")
         return super().update(instance, data)
-
-    def validate_client(self, value):
-        print("validate")
-        if value.sales_contact != self.context["request"].user:
-            raise serializers.ValidationError(
-                "You can not create/update a contract for a client who is not yours"
-            )
-        return value
 
 
 class EventSerializer(serializers.ModelSerializer):
+    client_id = serializers.SerializerMethodField()
+
     class Meta:
         model = Event
         fields = [
             "id",
+            "client_id",
             "contract_id",
             "support_contact_id",
             "event_status",
@@ -73,38 +68,21 @@ class EventSerializer(serializers.ModelSerializer):
             "date_updated",
         ]
 
-    def url_consistency(self):
-        # the client exists?
-        client_id = self.context["view"].kwargs["client_pk"]
-        client = get_object_or_404(Client, id=client_id)
-        # the contract exist?
-        contract_id = self.context["view"].kwargs["contract_pk"]
-        contract = get_object_or_404(Contract, id=contract_id)
-
-        return client, contract
+    def get_client_id(self, obj):
+        client_id = obj.contract.client_id
+        return client_id
 
     def create(self, data):
-        client, contract = self.url_consistency()
-        if contract.client != client:
-            raise serializers.ValidationError("It is not a contract of the client")
+
+        contract_id = self.context["request"].data["contract_id"]
+        contract = get_object_or_404(Contract, id=contract_id)
+        if not contract.status:
+            raise serializers.ValidationError(
+                "You can not create an event if the contract is not signed"
+            )
+
         data["contract"] = contract
         return super().create(data)
 
     def update(self, instance, data):
-        _, contract = self.url_consistency()
-        event_id = self.context["view"].kwargs["pk"]
-        event = get_object_or_404(Event, id=event_id)
-        if event.contract != contract:
-            raise serializers.ValidationError("Contract and event are non consistent")
         return super().update(instance, data)
-
-    def validate_contract(self, value):
-        if value.sales_contact != self.context["request"].user:
-            raise serializers.ValidationError(
-                "You can not create an event for a client who is not yours"
-            )
-        if not value.status:
-            raise serializers.ValidationError(
-                "You can not create an event if the contract is not signed"
-            )
-        return value
