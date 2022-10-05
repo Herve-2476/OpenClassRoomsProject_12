@@ -36,25 +36,6 @@ class IsContractOwner(BasePermission):
         return contract.sales_contact == request.user
 
 
-class IsClientContractOwner(BasePermission):
-    # The code is the same for Client and Contract because of
-    # the two attributes sales_contact have the same name in the
-    # two models
-    message = "it's not your client"
-
-    def has_permission(self, request):
-        client_id = self.context["view"].kwargs["client_pk"]
-        client = get_object_or_404(Client, id=client_id)
-        return client.sales_contact == request.user
-
-
-class IsSupport(BasePermission):
-    message = "You must be support to access this feature"
-
-    def has_permission(self, request, view):
-        return "Support" == str(request.user.groups.all().first())
-
-
 class IsEventOwner(BasePermission):
     message = "You must be the sales representative or the support of this event"
 

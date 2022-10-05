@@ -32,19 +32,19 @@ class ClientViewset(ModelViewSet):
                 if value == "True":
                     return Client.objects.filter(
                         id__in={client.id for client in signed_client}
-                    )
+                    ).order_by("id")
                 else:
                     return Client.objects.exclude(
                         id__in={client.id for client in signed_client}
-                    )
+                    ).order_by("id")
 
             else:
                 kwargs = {}
                 for field, value in self.request.query_params.items():
                     if field in ["company_name", "email"]:
                         kwargs[field] = value
-                return Client.objects.filter(**kwargs)
-        return Client.objects.all()
+                return Client.objects.filter(**kwargs).order_by("id")
+        return Client.objects.all().order_by("id")
 
     def get_permissions(self):
         if self.action == "create":
@@ -78,9 +78,9 @@ class ContractViewset(ModelViewSet):
                     kwargs["client__" + field] = value
                 elif field in ["amount", "date_created"]:
                     kwargs[field + "__gt"] = value
-            return Contract.objects.filter(**kwargs)
+            return Contract.objects.filter(**kwargs).order_by("id")
 
-        return Contract.objects.all()
+        return Contract.objects.all().order_by("id")
 
     def get_permissions(self):
         if self.action == "create":
@@ -105,13 +105,13 @@ class EventViewset(ModelViewSet):
         if len(self.request.query_params) > 0:
             kwargs = {}
             for field, value in self.request.query_params.items():
-                if field in ["last_name", "email"]:
+                if field in ["company_name", "email"]:
                     kwargs["contract__client__" + field] = value
-                elif field in ["date_created"]:
+                elif field in ["event_date"]:
                     kwargs[field + "__gt"] = value
-            return Event.objects.filter(**kwargs)
+            return Event.objects.filter(**kwargs).order_by("id")
 
-        return Event.objects.all()
+        return Event.objects.all().order_by("id")
 
     def get_permissions(self):
         if self.action == "create":

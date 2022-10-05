@@ -46,9 +46,6 @@ class ContractSerializer(serializers.ModelSerializer):
         data["sales_contact"] = self.context["request"].user
         return super().create(data)
 
-    def update(self, instance, data):
-        return super().update(instance, data)
-
 
 class EventSerializer(serializers.ModelSerializer):
     client_id = serializers.SerializerMethodField()
@@ -76,13 +73,15 @@ class EventSerializer(serializers.ModelSerializer):
 
         contract_id = self.context["request"].data["contract_id"]
         contract = get_object_or_404(Contract, id=contract_id)
-        if not contract.status:
+        if not contract.signed:
             raise serializers.ValidationError(
                 "You can not create an event if the contract is not signed"
+            )
+        events = Event.objects.filter(contract_id=contract_id)
+        if events:
+            raise serializers.ValidationError(
+                "There is already one event created for this contact"
             )
 
         data["contract"] = contract
         return super().create(data)
-
-    def update(self, instance, data):
-        return super().update(instance, data)
